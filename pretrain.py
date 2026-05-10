@@ -27,6 +27,7 @@ always partially visible during pretraining; only at fine-tuning does it
 become fully unknown.
 """
 
+from tqdm.auto import tqdm
 import os
 import time
 from pathlib import Path
@@ -132,42 +133,91 @@ def main(cfg: Config):
     for epoch in range(cfg.pretrain.epochs):
         model.train()
         t0 = time.time()
-        for past, future in train_loader:
+
+        pbar = tqdm(
+            train_loader,
+            desc=f"Pretrain Epoch {epoch+1}/{cfg.pretrain.epochs}",
+            leave=True,
+        )
+
+        running_loss = 0.0
+        running_past = 0.0
+        running_future = 0.0
+
+        for past, future in pbar:
             past = past.to(device, non_blocking=True)
             future = future.to(device, non_blocking=True)
 
             loss, lp, lf = pretrain_loss(
-                model, past, future, cfg.mask.mask_rate, cfg.pretrain.alpha
+                model, past, future,
+                cfg.mask.mask_rate,
+                cfg.pretrain.alpha
             )
 
             optim.zero_grad()
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+
+            torch.nn.utils.clip_grad_norm_(
+                model.parameters(),
+                max_norm=1.0
+            )
+
             optim.step()
             sched.step()
 
-            if step % cfg.pretrain.log_every == 0:
-                print(
-                    f"[pretrain] ep {epoch:3d} step {step:6d}  "
-                    f"loss {loss.item():.4f}  past {lp.item():.4f}  future {lf.item():.4f}  "
-                    f"lr {optim.param_groups[0]['lr']:.2e}"
-                )
+            # Running averages
+            running_loss += loss.item()
+            running_past += lp.item()
+            running_future += lf.item()
+
+            avg_loss = running_loss / (step + 1)
+            avg_past = running_past / (step + 1)
+            avg_future = running_future / (step + 1)
+
+            # GPU memory usage (GB)
+            if torch.cuda.is_available():
+                gpu_mem = torch.cuda.memory_allocated() / 1024**3
+            else:
+                gpu_mem = 0.0
+
+            # Update tqdm bar
+            pbar.set_postfix({
+                "loss": f"{loss.item():.4f}",
+                "past": f"{lp.item():.4f}",
+                "future": f"{lf.item():.4f}",
+                "lr": f"{optim.param_groups[0]['lr']:.2e}",
+                "gpu_gb": f"{gpu_mem:.2f}",
+            })
+
             step += 1
 
-        # Validation.
+        # Validation
         if (epoch + 1) % cfg.pretrain.val_every == 0:
             val_total, val_past, val_future = evaluate_pretrain(
-                model, val_loader, device, cfg.mask.mask_rate, cfg.pretrain.alpha
-            )
-            dt = time.time() - t0
-            print(
-                f"[pretrain] === ep {epoch:3d} done in {dt:.1f}s  "
-                f"val total {val_total:.4f}  past {val_past:.4f}  future {val_future:.4f} ==="
+                model,
+                val_loader,
+                device,
+                cfg.mask.mask_rate,
+                cfg.pretrain.alpha,
             )
 
-            # Save best checkpoint and a rolling 'last' copy.
+            dt = time.time() - t0
+
+            print("\n" + "=" * 70)
+            print(
+                f"[pretrain] Epoch {epoch+1}/{cfg.pretrain.epochs} "
+                f"finished in {dt:.1f}s"
+            )
+            print(f"Train loss : {running_loss / len(train_loader):.4f}")
+            print(f"Val total  : {val_total:.4f}")
+            print(f"Val past   : {val_past:.4f}")
+            print(f"Val future : {val_future:.4f}")
+            print("=" * 70)
+
+            # Save best checkpoint
             if val_total < best_val:
                 best_val = val_total
+
                 ckpt = {
                     "epoch": epoch,
                     "model": model.state_dict(),
@@ -175,11 +225,22 @@ def main(cfg: Config):
                     "val": val_total,
                     "cfg": cfg.__dict__,
                 }
-                torch.save(ckpt, os.path.join(cfg.pretrain.ckpt_dir, "best.pt"))
+
+                torch.save(
+                    ckpt,
+                    os.path.join(cfg.pretrain.ckpt_dir, "best.pt")
+                )
+
                 print(f"[pretrain] saved new best ({val_total:.4f})")
 
-            torch.save({"epoch": epoch, "model": model.state_dict()},
-                       os.path.join(cfg.pretrain.ckpt_dir, "last.pt"))
+            # Save rolling checkpoint
+            torch.save(
+                {
+                    "epoch": epoch,
+                    "model": model.state_dict(),
+                },
+                os.path.join(cfg.pretrain.ckpt_dir, "last.pt")
+            )
 
 
 if __name__ == "__main__":

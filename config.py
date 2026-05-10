@@ -30,6 +30,8 @@ class DataConfig:
     # smoke tests before you have Human3.6M downloaded).
     use_synthetic: bool = False
 
+    downsample: int = 2
+
 
 @dataclass
 class ModelConfig:
