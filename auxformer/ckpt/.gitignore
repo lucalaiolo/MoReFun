@@ -1,0 +1,10 @@
+# Pretrained AuxFormer checkpoints are large (~90 MB total) and live in the
+# upstream repo at MediaBrain-SJTU/AuxFormer. Fetch them locally with:
+#
+#     python download_auxformer_ckpts.py
+#
+# but don't commit them to your fork.
+*.pth.tar
+
+# Keep the directory itself.
+!.gitkeep
