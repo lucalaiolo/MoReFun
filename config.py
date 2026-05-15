@@ -24,7 +24,7 @@ class DataConfig:
     test_subjects: List[str] = field(default_factory=lambda: ["S9", "S11"])
 
     # Where the preprocessed .npz files live. See data.py for expected layout.
-    data_root: str = "./data/h36m"
+    data_root: str = "./h36m/dataset"
 
     # Set to True to skip real data and run on a synthetic generator (useful for
     # smoke tests before you have Human3.6M downloaded).
