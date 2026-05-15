@@ -54,14 +54,15 @@ def pool_features(features: torch.Tensor, past_len: int, mode: str) -> torch.Ten
     features: (B, N, T, F)
     past_len: number of observed timestamps; the rest are future placeholders
     mode:
-        - 'none'        -> (B, N, T, F)
-        - 'mean'        -> (B, F)               mean over N, T
-        - 'mean_past'   -> (B, F)               mean over N and past frames only
-        - 'mean_joints' -> (B, T, F)            mean over joints, keep time
-        - 'mean_time'   -> (B, N, F)            mean over time, keep joints
-        - 'mean_time_past' -> (B, N, F)         mean over past frames only, keep joints
-        - 'flatten'     -> (B, N*T*F)           flat per-sample vector
-        - 'flatten_past'-> (B, N*past_len*F)    flat, observed part only
+        - 'none'             -> (B, N, T, F)
+        - 'mean'             -> (B, F)            mean over N, T
+        - 'mean_past'        -> (B, F)            mean over N and past frames only
+        - 'mean_joints'      -> (B, T, F)         mean over joints, keep time
+        - 'mean_joints_past' -> (B, past_len, F)  mean over joints, keep past frames only
+        - 'mean_time'        -> (B, N, F)         mean over time, keep joints
+        - 'mean_time_past'   -> (B, N, F)         mean over past frames only, keep joints
+        - 'flatten'          -> (B, N*T*F)        flat per-sample vector
+        - 'flatten_past'     -> (B, N*past_len*F) flat, observed part only
     """
     if mode == "none":
         return features
@@ -71,6 +72,8 @@ def pool_features(features: torch.Tensor, past_len: int, mode: str) -> torch.Ten
         return features[:, :, :past_len].mean(dim=(1, 2))
     if mode == "mean_joints":
         return features.mean(dim=1)
+    if mode == "mean_joints_past":                              # <-- new
+        return features[:, :, :past_len].mean(dim=1)            # <-- new
     if mode == "mean_time":
         return features.mean(dim=2)
     if mode == "mean_time_past":
@@ -80,6 +83,7 @@ def pool_features(features: torch.Tensor, past_len: int, mode: str) -> torch.Ten
     if mode == "flatten_past":
         return features[:, :, :past_len].flatten(start_dim=1)
     raise ValueError(f"unknown pool mode: {mode}")
+
 
 
 # --------------------------------------------------------------------------
@@ -127,10 +131,11 @@ def main():
                    help="Where to write encodings.npy / labels.npy / meta.json. "
                         "Default: encodings/h36m_{task}_{pool}/")
     p.add_argument("--pool", default="mean_past",
-                   choices=["none", "mean", "mean_past", "mean_joints",
-                            "mean_time", "mean_time_past", "flatten",
-                            "flatten_past"],
-                   help="How to summarize the (B, N, T, F) feature tensor.")
+               choices=["none", "mean", "mean_past", "mean_joints",
+                        "mean_joints_past",       # <-- new
+                        "mean_time", "mean_time_past", "flatten",
+                        "flatten_past"],
+               help="How to summarize the (B, N, T, F) feature tensor.")
     p.add_argument("--device", type=str, default=None)
     p.add_argument("--batch-size", type=int, default=None,
                    help="Override config's batch size for extraction.")
