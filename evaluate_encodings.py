@@ -237,8 +237,12 @@ def main():
     enc, labels, sample_idx, meta = load_encodings(enc_dir)
     title_tag = f"{meta.get('task', '?')}/{meta.get('pool_mode', '?')}"
 
-    print(f"[probe] loaded {enc.shape[0]} samples × {enc.shape[1]} dims "
-          f"from {enc_dir}")
+    print(f"[probe] loaded {enc.shape} from {enc_dir}")
+    if enc.ndim > 2:
+        flat_dim = int(np.prod(enc.shape[1:]))
+        print(f"[probe] flattening per-sample shape {enc.shape[1:]} -> ({flat_dim},)")
+        enc = enc.reshape(enc.shape[0], flat_dim)
+
     print(f"[probe] task = {title_tag}, "
           f"actions = {len(np.unique(labels))}")
 
