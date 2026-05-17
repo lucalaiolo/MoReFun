@@ -249,8 +249,8 @@ def map_to_h36m_22(kpts: np.ndarray) -> np.ndarray:
     h36m[:, 13] = neck_pt
     h36m[:, 14] = head_pt
     h36m[:, 15] = head_top_pt
-    h36m[:, 16] = spine2_pt
-    h36m[:, 17] = g("left_shoulder")
+    h36m[:, 16] = (spine2_pt + (g("left_shoulder") + g("right_shoulder")) * 0.5) * 0.5
+    # put thorax_dup halfway between spine2 and the shoulder midpoint    h36m[:, 17] = g("left_shoulder")
     h36m[:, 18] = g("left_elbow")
     h36m[:, 19] = g("left_wrist")
     h36m[:, 20] = g("left_middle_finger_third_joint")
