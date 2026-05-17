@@ -218,7 +218,7 @@ def main():
     p.add_argument("--out-dir", type=str, default=None,
                    help="Where to write figures and analysis.json. "
                         "Defaults to --enc-dir/analysis/.")
-    p.add_argument("--subsample", type=int, default=25,
+    p.add_argument("--subsample", type=int, default=1,
                    help="Keep every k-th sample within each action class "
                         "(stride-1 windows are highly correlated). Default 25 "
                         "≈ 1 s of motion between consecutive samples at 25 fps. "
