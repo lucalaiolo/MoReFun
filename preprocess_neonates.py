@@ -95,9 +95,9 @@ H36M_KEPT = [
 
 # H3.6M bone offsets (parent->child) in mm — from forward_kinematics.py
 H36M_PARENT = np.array([
-    -1, 0, 1, 2, 3, 4, 0, 6, 7, 8, 9, 0, 11, 12, 13, 14,
-    12, 16, 17, 18, 19, 20, 19, 22, 12, 24, 25, 26, 27, 28, 27, 30,
-])
+        -1, 0, 1, 2, 3, 4, 0, 6, 7, 8, 9, 0, 11, 12, 13, 14,
+        12, 16, 17, 18, 19, 20, 19, 12, 12, 24, 25, 26, 27, 26, 27, 30,
+    ])
 
 H36M_BONE_LEN_MM = {
     # bone (parent_h36m_idx, child_h36m_idx) -> length in mm
