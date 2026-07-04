@@ -205,16 +205,16 @@ def compute_loss(model_outputs: tuple, future_target: torch.Tensor,
 
     mask_loss = torch.sum(torch.norm(mask_pred - mask_gt, dim=-1, p=2)) / torch.sum(mask)
 
-    if cfg.denoise_mode == "past":
+    if cfg.denoise_mode == "all":
+        # denoised_pred and all_traj both have the past+future concat shape (B,N,T,3)
+        all_traj = torch.cat([past_target, future_target], dim=2)
+        denoise_loss = torch.mean(torch.norm(denoised_pred - all_traj, dim=-1))
+    elif cfg.denoise_mode == "past":
         denoise_loss = torch.mean(torch.norm(denoised_pred - past_target, dim=-1))
     elif cfg.denoise_mode == "future":
         denoise_loss = torch.mean(torch.norm(denoised_pred - future_target, dim=-1))
     else:
-        denoise_loss = torch.tensor(0.0, device=future_target.device)
-
-    total = pred_loss + mask_loss + denoise_loss
-    return {"total": total, "pred": pred_loss.detach(),
-             "mask": mask_loss.detach(), "denoise": denoise_loss.detach()}
+        raise ValueError(f"Unknown denoise_mode: {cfg.denoise_mode}")
 
 
 @torch.no_grad()
